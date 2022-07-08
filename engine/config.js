@@ -12,15 +12,15 @@ const authConfig = {
 }
 
 const databaseConfig = {
-    uri: "mongodb+srv://cyclobold_user:e6b5eBt.$5PAcgx@cluster0.qcoqo.mongodb.net/?retryWrites=true&w=majority",
-    dbname: "broomsticks"
+    uri: process.env.DB_URI,
+    dbname: process.env.DBNAME
 }
 
 
 const mailConfig = {
-    service: "gmail",
-    user: "cycloboldtest@gmail.com",
-    password: "nnjfgdzlgbpwwqjo"
+    service: process.env.EMAIL_SERVICE,
+    user: process.env.USERNAME,
+    password: process.env.PASSWORD
 }
 
 
