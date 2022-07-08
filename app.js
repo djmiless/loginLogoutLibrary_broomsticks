@@ -2,46 +2,178 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
+const bcryptjs = require("bcryptjs");
+// require("dotenv").config(); //bring in the dotenv package.
+const { authConfig, databaseConfig, mailConfig } = require("./engine/config");
 var logger = require('morgan');
 const nodemailer = require("nodemailer");
 const mongodb = require("mongodb");
+const session = require("express-session"); 
+const mongodbSession = require("connect-mongodb-session")(session);
+
 
 //create the mongodb client
 const MongoClient = mongodb.MongoClient;
 
-const client = new MongoClient("mongodb+srv://cyclobold_user:e6b5eBt.$5PAcgx@cluster0.qcoqo.mongodb.net/?retryWrites=true&w=majority")
-
+// const client = new MongoClient("mongodb+srv://cyclobold_user:e6b5eBt.$5PAcgx@cluster0.qcoqo.mongodb.net/?retryWrites=true&w=majority")
+const client = new MongoClient(databaseConfig.uri)
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 const registerRouter = require("./routes/register")
 const loginRouter = require("./routes/login");
-
-
-
-
-
+const logoutRouter = require("./routes/logout");
+const userRouter = require("./routes/user");
 
 var app = express();
 
+const mongodbSessionStore = new mongodbSession({
+  uri: databaseConfig.uri,
+  databaseName: "broomsticks-sessions",
+  collection: "broomsticks-sessions"
+})
+
+
+//bring in the session
+app.use(session({
+  secret: authConfig.secret,
+  resave: false,
+  saveUninitialized: false,
+  store: mongodbSessionStore
+
+}))
+
+
+
 app.use(express.json());
+
+
 
 //Email Setup
 var transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: mailConfig.service,
   auth: {
-    user: "cycloboldtest@gmail.com",
-    pass: "wqqsyclsiybxrveh"
+    user: mailConfig.user,
+    pass: mailConfig.password
   }
 });
 
+//functions
+const internally_check_user_exists = async (email, password) => {
+
+  console.log("Checking Password: ", password);
+
+  const feedback = await client.db(databaseConfig.dbname).collection("users").findOne({ "email": email });
+
+  if(feedback){
+    //compare with the email address
+    const isMatchedPassword = await bcryptjs.compare(password, feedback.password);
+
+    if(isMatchedPassword){
+      return {
+        message: "user is valid",
+        code: "valid-user",
+        data: { email: feedback.email , firstname: feedback.firstname, lastname: feedback.lastname }
+      }
+
+    }else{
+      return{
+        message: "user is invalid",
+        code: "invalid-user",
+        data: null
+  
+      }
+    }
+
+
+
+  }else{
+    return{
+      message: "user is invalid",
+      code: "invalid-user",
+      data: null
+
+    }
+  }
+
+
+}
+
+app.post("/logout", function(req, res){
+  //logout the user 
+  req.session.destroy(function(error){
+    if(error) throw error;
+
+    res.redirect("/login");
+
+  })
+
+
+})
+
+
 //Endpoints
-app.post("/register-user", function(request, response){
+
+//Login User
+app.post("/login-user", async function(request, response){
+
+  const {email, password } = request.body;
+
+
+  //check the user again ..,
+  const feedback = await internally_check_user_exists(email, password);
+
+  console.log("checks: ", feedback)
+  if(feedback){
+    if(feedback.code == "valid-user"){
+      request.session.loginStatus = {
+        "is_user_logged_in": true,
+        "email": feedback.data.email,
+        "firstname" : feedback.data.firstname,
+        "lastname": feedback.data.lastname 
+    }
+
+     //redirect
+     response.send({
+      message: "user logged in successfully",
+      code: "authenticated",
+      data: {}
+    })
+
+  }else{
+
+    response.send({
+      message: "invalid email/password combination",
+      code: "not-authenticated",
+      data: {}
+    })
+
+
+  }
+
+  }
+
+ 
+
+ 
+
+
+
+})
+
+
+
+//Register User
+app.post("/register-user", async function(request, response){
     const firstname = request.body.firstname
     const lastname = request.body.lastname
     const email = request.body.email
     const password = request.body.password
 
-    const email_link = `http://localhost:3000/verify_account?email=${email}&&key=1234`;
+    //hash the password
+    let hashedPassword = await bcryptjs.hash(password, 12);
+
+
+    const email_link = `http://localhost:3000/verify_account?email=${email}&&key=123`;
 
     //send email to this user
     const mailOptions =  {
@@ -69,7 +201,7 @@ app.post("/register-user", function(request, response){
             firstname: firstname,
             lastname: lastname,
             email: email,
-            password: password,
+            password: hashedPassword,
             key: 123,
             is_user_verified: false
 
@@ -88,6 +220,50 @@ app.post("/register-user", function(request, response){
     })
     
 })
+
+//check if this user exists already
+app.post("/check-user-details", async function(request, response){
+
+  const email = request.body.email;
+  const password = request.body.password;
+
+  const feedback = await client.db(databaseConfig.dbname).collection("users").findOne({ "email": email });
+
+  if(feedback){
+      //this user is a valid user..
+      const isPasswordMatched = await bcryptjs.compare(password, feedback.password);
+      if(isPasswordMatched){
+        response.send({
+          message: "user is valid",
+          code: "valid-user",
+          data: { email: feedback.email , firstname: feedback.firstname, lastname: feedback.lastname }
+        })
+      }else{
+        response.send({
+          message: "user is invalid",
+          code: "invalid-user",
+          data: null
+        })
+      }
+
+  }else{
+
+    response.send({
+      message: "user is invalid",
+      code: "invalid-user",
+      data: null
+
+    })
+
+  }
+  
+
+})
+
+
+// app.get("/logout", function(req, res){
+//   console.log("works")
+// })
 
 app.get("/verify_account", async function(request, response){
 
@@ -172,6 +348,8 @@ app.use('/', indexRouter);
 app.use('/users', usersRouter);
 app.use("/register", registerRouter);
 app.use("/login", loginRouter);
+app.use("/logout", logoutRouter);
+app.use("/user", userRouter); //the user's dashboard
 
 
 // catch 404 and forward to error handler

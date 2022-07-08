@@ -1,19 +1,18 @@
 var express = require('express');
 var router = express.Router();
 
-//bring in the middleware
-
-
 /* GET users listing. */
 router.get('/', function(req, res, next) {
   //res.send('respond with a resource');
-  //check if this user is logged in already
-
-  if(req.session.loginStatus && req.session.loginStatus.is_user_logged_in){
-    res.redirect("/user");
+  //check is the user is logged in 
+  if(req.session.loginStatus){
+    res.render('user', {
+        firstname: req.session.loginStatus.firstname
+    })
   }else{
-    res.render('login')
+    res.redirect("/login");
   }
+
 
   
 });

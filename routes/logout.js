@@ -1,16 +1,15 @@
 var express = require('express');
 var router = express.Router();
+const { authConfig } = require("../engine/config");
+
 
 /* GET users listing. */
 router.get('/', function(req, res, next) {
 
-  if(req.session.loginStatus && req.session.loginStatus.is_user_logged_in){
-    res.redirect("/user");
-  }else{
-    res.render('register')
-  }
 
-  
+  //logout the user
+  res.send("Logs out the user ");
+ 
 });
 
 module.exports = router;
