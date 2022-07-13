@@ -4,6 +4,7 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 const bcryptjs = require("bcryptjs");
 // require("dotenv").config(); //bring in the dotenv package.
+require("dotenv").config();
 const { authConfig, databaseConfig, mailConfig } = require("./engine/config");
 var logger = require('morgan');
 const nodemailer = require("nodemailer");

@@ -19,7 +19,7 @@ const databaseConfig = {
 
 const mailConfig = {
     service: process.env.EMAIL_SERVICE,
-    user: process.env.USERNAME,
+    user: process.env.EMAIL_ADDRESS,
     password: process.env.PASSWORD
 }
 
