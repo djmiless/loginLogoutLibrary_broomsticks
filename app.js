@@ -10,10 +10,10 @@ var logger = require('morgan');
 const nodemailer = require("nodemailer");
 const mongodb = require("mongodb");
 const session = require("express-session"); 
-const mongodbSession = require("connect-mongodb-session")(session);
+const mongodbSession = require("connect-mongodb-session")(session);  
 
 
-//create the mongodb client
+//create the mongodb clientt
 const MongoClient = mongodb.MongoClient;
 
 // const client = new MongoClient("mongodb+srv://cyclobold_user:e6b5eBt.$5PAcgx@cluster0.qcoqo.mongodb.net/?retryWrites=true&w=majority")
